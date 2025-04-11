@@ -1,0 +1,36 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "68ffcc25546fba92c1291c26f15f57ce"
+application_url = "https://heath-exhibitions-sent-submitted.trycloudflare.com"
+embedded = true
+name = "fifth-app"
+handle = "fifth-app-6"
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products, read_online_store_pages, read_product_listings"
+
+[auth]
+redirect_urls = [
+  "https://heath-exhibitions-sent-submitted.trycloudflare.com/auth/callback",
+  "https://heath-exhibitions-sent-submitted.trycloudflare.com/auth/shopify/callback",
+  "https://heath-exhibitions-sent-submitted.trycloudflare.com/api/auth/callback"
+]
+
+[pos]
+embedded = false
