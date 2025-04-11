@@ -19,13 +19,16 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
-import { SearchIcon } from "@shopify/polaris-icons";
+import { NoteIcon, SearchIcon } from "@shopify/polaris-icons";
 import { validImageTypes } from "app/constants";
 import { useDebounce } from "app/hook/useDebounce";
 import { useUpdateParams } from "app/hook/useUpdateParams";
 import { authenticate } from "app/shopify.server";
 import { useGalleryStore } from "app/store";
-import { addGallery, getAllHotspots } from "app/utils/galleries.server";
+import {
+  addHotspotToGallery,
+  getAllHotspots,
+} from "app/utils/galleries.server";
 import ImageKit from "imagekit";
 import React, { useState, useRef, useEffect } from "react";
 
@@ -94,11 +97,11 @@ export const action: ActionFunction = async ({ request }) => {
     maxPartSize: 10_000_000, // 10MB
   });
 
-  const formData = await unstable_parseMultipartFormData(
+  const formDataImage = await unstable_parseMultipartFormData(
     request,
     uploadHandler,
   );
-  const file = formData.get("file");
+  const file = formDataImage.get("file");
 
   if (!file || typeof file === "string") {
     return Response.json({ error: "No file uploaded" }, { status: 400 });
@@ -111,24 +114,17 @@ export const action: ActionFunction = async ({ request }) => {
       fileName: "upload.jpg",
       folder: "/gallery",
     });
+
+    //
+    const formData = await request.formData();
     const data = JSON.parse(formData.get("data") as string);
-
-    console.log("dataaaskdjfldsj", {
-      title: data.title,
-      hotspots: data.hotspots,
-      imageUrl: result.url,
-    });
-
-    console.log(typeof data.hotspots, "hotspotsssss");
-
     if (request.method === "POST")
-      await addGallery({
-        title: data.title,
-        hotspots: data.hotspots,
-        imageUrl: result.url,
+      await addHotspotToGallery({
+        galleryId: "67ef56050993390326abd531",
+        hotspot: data,
       });
 
-    return "success";
+    return Response.json({ url: result.url });
   } catch (err) {
     console.error("ImageKit Upload Error", err);
     return Response.json({ error: "Failed to upload image" }, { status: 500 });
@@ -147,11 +143,15 @@ export default function AppDemo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { axis, editAxis, resetAxis } = useGalleryStore();
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const currentImgHotspot = gallerys.results.filter(
-    (g: any) => g.value === selectedOptions[0],
-  )[0]?.img;
-  const [tilte, setTitle] = useState<string>("");
+  // const [currentHotspotValue, setCurrentHotspotValue] = useState({
+  //   id: "",
+  //   title: "",
+  //   img: "",
+  //   axis: {
+  //     x: 0,
+  //     y: 0,
+  //   },
+  // });
 
   useEffect(() => {
     resetAxis();
@@ -195,8 +195,6 @@ export default function AppDemo() {
       ...updated[index],
       saved: true,
       label: inputValue || `New Hotspot `,
-      id: selectedOptions[0]?.split("/").pop() ?? "",
-      img: currentImgHotspot,
     };
     setHotspots(updated);
     setEditingIndex(null);
@@ -291,9 +289,30 @@ export default function AppDemo() {
 
   const debouncedSearch = useDebounce(inputValue);
   const updateParam = useUpdateParams();
+
   useEffect(() => {
     updateParam("search", debouncedSearch.trim());
   }, [debouncedSearch]);
+
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  console.log("selectedOptions", selectedOptions[0].split("/").pop());
+  // const getImageByGid = (gid: string) => {
+  //   const found = gallerys?.results?.find((p: any) => p.value === gid);
+  //   return found?.img || "";
+  // };
+
+  // useEffect(() => {
+  //   setCurrentHotspotValue((prev) => ({
+  //     ...prev,
+  //     id: selectedOptions[0],
+  //     title: inputValue,
+  //     img: getImageByGid(selectedOptions[0]),
+  //     axis: {
+  //       x: hotspots[0] ? hotspots[0].x : 0,
+  //       y: hotspots[0] ? hotspots[0].y : 0,
+  //     },
+  //   }));
+  // }, [hotspots]);
 
   const updateSelection = (selected: string[]) => {
     const selectedValue = selected.map((selectedItem) => {
@@ -330,20 +349,21 @@ export default function AppDemo() {
 
   const handleUpload = () => {
     if (!file) return;
+
     const formData = new FormData();
     formData.append("file", file);
-    const data = {
-      title: tilte,
-      hotspots: hotspots.map((h) => ({
-        x: h.x,
-        y: h.y,
-        tilte: h.label,
-        img: h.img,
-        productId: h.id,
-      })),
-    };
-    formData.append("data", JSON.stringify(data));
-    fetcher.submit(formData, { method: "post" });
+    //
+    // const formData = new FormData();
+    // const data = {
+    //   id: currentHotspotValue.id,
+    //   title: currentHotspotValue.title,
+    //   img: currentHotspotValue.img,
+    //   x: currentHotspotValue.axis.x,
+    //   y: currentHotspotValue.axis.y,
+    // };
+    // formData.append("data", JSON.stringify(data));
+    // fetcher.submit(formData, { method: "post" });
+
     fetcher.submit(formData, {
       method: "post",
       encType: "multipart/form-data",
@@ -355,11 +375,6 @@ export default function AppDemo() {
     <Page
       title="Gallery Page"
       backAction={argOfPage.backAction}
-      primaryAction={
-        <Button variant="primary" onClick={handleUpload}>
-          save
-        </Button>
-      }
       secondaryActions={
         <Button
           tone="critical"
@@ -393,8 +408,6 @@ export default function AppDemo() {
               label=""
               placeholder="Gallery Title"
               autoComplete="off"
-              value={tilte}
-              onChange={(value) => setTitle(value)}
             />
           </Box>
           <Scrollable style={{ height: "80vh" }}>
@@ -577,17 +590,12 @@ export default function AppDemo() {
                           height: "100px",
                           objectFit: "cover",
                         }}
-                        src={`${point.img ?? "https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/04/anh-con-gai-1-1.jpg"}`}
+                        src="https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/04/anh-con-gai-1-1.jpg"
                         alt=""
                       />
                     </div>
                     <p>{point.label}</p>
-                    <a
-                      target="_blank"
-                      href={`https://admin.shopify.com/store/the-most-expensive-store-on-the-world/products/${point.id}`}
-                    >
-                      see more
-                    </a>
+                    <Button url="/app">see more</Button>
                   </div>
                 )}
               </div>

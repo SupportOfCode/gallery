@@ -4,11 +4,17 @@ import { FilterQuery } from "mongoose";
 
 connectDB();
 
-type ParamsGet = {
+type ParamsGetGalleries = {
   title: string;
   fromDate: string;
   toDate: string;
   sort: string;
+};
+
+type ParamsAddGallery = {
+  title: string;
+  imageUrl?: string;
+  hotspots?: Omit<IHotspot, "_id">[];
 };
 
 type ParamsAddHotspot = {
@@ -16,7 +22,7 @@ type ParamsAddHotspot = {
   hotspot: Omit<IHotspot, "_id">;
 };
 
-export const getGalleries = async (params: ParamsGet) => {
+export const getGalleries = async (params: ParamsGetGalleries) => {
   try {
     const filter: FilterQuery<GalleryType> = {};
     if (params?.title) {
@@ -62,6 +68,28 @@ export const getGalleries = async (params: ParamsGet) => {
     if (error instanceof Error) {
       throw new Error(
         "Some thing went wrong when you get galleries" + error.message,
+      );
+    }
+  }
+};
+
+export const addGallery = async ({
+  title,
+  imageUrl,
+  hotspots = [],
+}: ParamsAddGallery) => {
+  try {
+    const newGallery = await Gallery.create({
+      title,
+      imageUrl,
+      hotspots,
+    });
+
+    return newGallery;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        "Something went wrong while adding gallery: " + error.message,
       );
     }
   }

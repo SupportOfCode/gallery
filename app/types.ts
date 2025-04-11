@@ -14,7 +14,14 @@ type GalleryType = {
   createdAt: Date;
 };
 
-type Point = { x: number; y: number; saved: boolean; label: string };
+type Point = {
+  x: number;
+  y: number;
+  saved: boolean;
+  label: string;
+  img: string;
+  id: string;
+};
 
 type AxisType = {
   x: number;
