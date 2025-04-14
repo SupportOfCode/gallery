@@ -11,6 +11,7 @@ export interface IHotspot extends Document {
 export interface IGallery extends Document {
   title: string;
   imageUrl: string;
+  idImage: string;
   hotspots: IHotspot[];
 }
 
@@ -26,6 +27,7 @@ const GallerySchema: Schema<IGallery> = new Schema(
   {
     title: { type: String, required: true },
     imageUrl: { type: String },
+    idImage: { type: String },
     hotspots: [HotspotSchema],
   },
   { timestamps: true },

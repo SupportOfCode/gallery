@@ -28,7 +28,10 @@ export default function CustomRowIndexTabel({
     >
       <IndexTable.Cell>
         <Thumbnail
-          source="https://burst.shopifycdn.com/photos/black-leather-choker-necklace_373x@2x.jpg"
+          source={
+            data.imageUrl ??
+            "https://burst.shopifycdn.com/photos/black-leather-choker-necklace_373x@2x.jpg"
+          }
           size="medium"
           alt="Black choker necklace"
         />

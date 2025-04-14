@@ -24,7 +24,6 @@ export default function App() {
           Home
         </Link>
         <Link to="/app/gallery/new">gallery page</Link>
-        <Link to="/app/demo4">demo 4</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>

@@ -1,27 +1,34 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { axisInit } from "./constants";
+import { loadingInit } from "./constants";
 
 interface GalleryStore {
-  axis: AxisType;
-  editAxis: ({ x, y }: AxisType) => void;
-  resetAxis: () => void;
+  loading: LoadingType;
+  editLoading: ({ ...props }: LoadingType) => void;
+  resetLoading: () => void;
 }
 
 export const useGalleryStore = create<GalleryStore>()(
   immer((set) => ({
-    axis: axisInit,
+    loading: loadingInit,
 
-    editAxis: ({ x, y }) => {
+    editLoading: ({
+      loadingNewGallery,
+      loadingFilter,
+      loadingSave,
+      loadingDeleteGallery,
+    }) => {
       set((state) => {
-        state.axis.x += x;
-        state.axis.y += y;
+        state.loading.loadingNewGallery = loadingNewGallery ?? false;
+        state.loading.loadingFilter = loadingFilter ?? false;
+        state.loading.loadingSave = loadingSave ?? false;
+        state.loading.loadingDeleteGallery = loadingDeleteGallery ?? false;
       });
     },
 
-    resetAxis: () => {
+    resetLoading: () => {
       set((state) => {
-        state.axis = axisInit;
+        state.loading = loadingInit;
       });
     },
   })),

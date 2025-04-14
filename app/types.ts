@@ -1,7 +1,6 @@
 type FilterType = {
   title: string;
-  fromDate: string;
-  toDate: string;
+  dateOfPicker: string;
   sortSelected: string[];
 };
 
@@ -23,7 +22,15 @@ type Point = {
   id: string;
 };
 
-type AxisType = {
-  x: number;
-  y: number;
+type LoadingType = {
+  loadingNewGallery?: boolean;
+  loadingFilter?: boolean;
+  loadingSave?: boolean;
+  loadingDeleteGallery?: boolean;
+};
+
+type ProductResource = {
+  id: string;
+  title: string;
+  images: { id: string; altText?: string; originalSrc?: string }[];
 };

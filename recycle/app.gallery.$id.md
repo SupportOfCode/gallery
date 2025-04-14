@@ -1,10 +1,16 @@
 import {
   ActionFunction,
   LoaderFunction,
+  redirect,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
 } from "@remix-run/node";
-import { useFetcher, useLoaderData, useNavigate } from "@remix-run/react";
+import {
+  useFetcher,
+  useLoaderData,
+  useNavigate,
+  useNavigation,
+} from "@remix-run/react";
 import {
   Autocomplete,
   Box,
@@ -20,13 +26,24 @@ import {
   TextField,
 } from "@shopify/polaris";
 import { SearchIcon } from "@shopify/polaris-icons";
-import { imagekit, validImageTypes } from "app/constants";
+import { validImageTypes } from "app/constants";
 import { useDebounce } from "app/hook/useDebounce";
 import { useUpdateParams } from "app/hook/useUpdateParams";
 import { authenticate } from "app/shopify.server";
 import { useGalleryStore } from "app/store";
 import { addGallery, getAllHotspots } from "app/utils/galleries.server";
+import ImageKit from "imagekit";
 import React, { useState, useRef, useEffect } from "react";
+
+const IkUrlEndpoint = process.env.IK_URL_ENDPOINT;
+const IkPublicKey = process.env.IK_PUBLIC_KEY;
+const IkPrivateKey = process.env.IK_PRIVATE_KEY;
+// ✅ Setup ImageKit SDK
+const imagekit = new ImageKit({
+  publicKey: IkPublicKey as string,
+  privateKey: IkPrivateKey as string,
+  urlEndpoint: IkUrlEndpoint as string,
+});
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
@@ -69,8 +86,8 @@ export const loader: LoaderFunction = async ({ request }) => {
       value: d?.node?.id,
       label: d?.node?.title,
     }));
-    // const listHotpost = await getAllHotspots("67ef56050993390326abd531");
-    return { results, options, listHotpost: [] };
+    const listHotpost = await getAllHotspots("67ef56050993390326abd531");
+    return { results, options, listHotpost };
   } catch (error) {
     console.error("Loader Error:", error);
     throw new Response("Internal Server Error");
@@ -102,14 +119,6 @@ export const action: ActionFunction = async ({ request }) => {
     });
     const data = JSON.parse(formData.get("data") as string);
 
-    console.log("dataaaskdjfldsj", {
-      title: data.title,
-      hotspots: data.hotspots,
-      imageUrl: result.url,
-    });
-
-    console.log(typeof data.hotspots, "hotspotsssss");
-
     if (request.method === "POST")
       await addGallery({
         title: data.title,
@@ -117,16 +126,17 @@ export const action: ActionFunction = async ({ request }) => {
         imageUrl: result.url,
       });
 
-    return "success";
+    return redirect("/app");
   } catch (err) {
     console.error("ImageKit Upload Error", err);
     return Response.json({ error: "Failed to upload image" }, { status: 500 });
   }
 };
 
-export function AppDemo() {
+export default function Gallery() {
   const gallerys = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
+  const navigation = useNavigation();
   const [hotspots, setHotspots] = useState<Point[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [originalHotspot, setOriginalHotspot] = useState<Point | null>(null);
@@ -135,16 +145,11 @@ export function AppDemo() {
   const draggingIndex = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { axis, editAxis, resetAxis } = useGalleryStore();
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const currentImgHotspot = gallerys.results.filter(
     (g: any) => g.value === selectedOptions[0],
   )[0]?.img;
   const [tilte, setTitle] = useState<string>("");
-
-  useEffect(() => {
-    resetAxis();
-  }, []);
 
   const handleAddHotspot = (newHotspot: Point) => {
     setHotspots([newHotspot, ...hotspots]);
@@ -152,7 +157,6 @@ export function AppDemo() {
     setInputValue("");
     setOriginalHotspot(null);
     setViewIndex(null);
-    editAxis({ x: 10, y: 10 });
   };
 
   const handleClickAddHotspot = (newHotspot: Point) => {
@@ -163,9 +167,12 @@ export function AppDemo() {
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     if (editingIndex !== null) return;
 
+    // const rect = e.currentTarget.getBoundingClientRect();
+    // const x = e.clientX - rect.left;
+    // const y = e.clientY - rect.top;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     const newHotspot: Point = {
       x,
@@ -195,7 +202,6 @@ export function AppDemo() {
 
   const handleCancel = () => {
     if (editingIndex === null) return;
-
     if (originalHotspot) {
       const updated = [...hotspots];
       updated[editingIndex] = originalHotspot;
@@ -214,7 +220,6 @@ export function AppDemo() {
   const handleEdit = (index: number) => {
     setOriginalHotspot({ ...hotspots[index] });
     setEditingIndex(index);
-    // setInputValue(hotspots[index].label);
     setViewIndex(null);
   };
 
@@ -245,10 +250,9 @@ export function AppDemo() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingIndex.current === null || !containerRef.current) return;
-
     const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
 
     const updated = [...hotspots];
     updated[draggingIndex.current] = {
@@ -277,7 +281,6 @@ export function AppDemo() {
   };
 
   // auto complete
-
   const debouncedSearch = useDebounce(inputValue);
   const updateParam = useUpdateParams();
   useEffect(() => {
@@ -308,18 +311,27 @@ export function AppDemo() {
     />
   );
 
+  useEffect(() => {
+    if (navigation.state === "loading") {
+      shopify.loading(true);
+    } else {
+      shopify.loading(false);
+    }
+  }, [navigation.state]);
+
   ///////////////////////
   const [file, setFile] = useState<File | null>();
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadResult = fetcher.data as
     | { url?: string; error?: string }
     | undefined;
 
+  const [loading, setLoading] = useState(false);
   const handleUpload = () => {
     if (!file) return;
     const formData = new FormData();
+    setLoading(true);
     formData.append("file", file);
     const data = {
       title: tilte,
@@ -345,7 +357,7 @@ export function AppDemo() {
       title="Gallery Page"
       backAction={argOfPage.backAction}
       primaryAction={
-        <Button variant="primary" onClick={handleUpload}>
+        <Button variant="primary" onClick={handleUpload} loading={loading}>
           save
         </Button>
       }
@@ -366,8 +378,8 @@ export function AppDemo() {
               variant="primary"
               onClick={() =>
                 handleClickAddHotspot({
-                  x: axis.x,
-                  y: axis.y,
+                  x: 50,
+                  y: 50,
                   saved: false,
                   label: "",
                   img: "",
@@ -400,9 +412,9 @@ export function AppDemo() {
                       />
                       <Box minHeight="12px" />
                       <RangeSlider
-                        label={`X axis ${point.x}`}
+                        label={`X axis ${Math.round(point.x)}%`}
                         min={0}
-                        max={834}
+                        max={100}
                         value={point.x}
                         onChange={(value) =>
                           handlePositionChange(index, "x", Number(value))
@@ -410,9 +422,9 @@ export function AppDemo() {
                       />
                       <Box minHeight="12px" />
                       <RangeSlider
-                        label={`X axis ${point.y}`}
+                        label={`Y axis ${Math.round(point.y)}%`}
                         min={0}
-                        max={641}
+                        max={100}
                         value={point.y}
                         onChange={(value) =>
                           handlePositionChange(index, "y", Number(value))
@@ -425,7 +437,6 @@ export function AppDemo() {
                         >
                           <Button
                             onClick={() => handleSave(index)}
-                            tone="success"
                             variant="primary"
                           >
                             Save
@@ -451,8 +462,8 @@ export function AppDemo() {
                       </Text>
                       <Box minHeight="6px" />
                       <Box minHeight="30px">
-                        <Text as="span">X: {Math.round(point.x)} </Text>
-                        <Text as="span"> Y: {Math.round(point.y)}</Text>
+                        <Text as="span">X: {Math.round(point.x)}%</Text>
+                        <Text as="span"> Y: {Math.round(point.y)}%</Text>
                       </Box>
                       <Grid>
                         <Grid.Cell
@@ -460,8 +471,7 @@ export function AppDemo() {
                         >
                           <Button
                             onClick={() => handleEdit(index)}
-                            tone="success"
-                            variant="secondary"
+                            variant="primary"
                           >
                             Sửa
                           </Button>
@@ -515,8 +525,8 @@ export function AppDemo() {
                 onClick={() => point.saved && toggleViewPopup(index)}
                 style={{
                   position: "absolute",
-                  top: point.y,
-                  left: point.x,
+                  top: `${point.y}%`,
+                  left: `${point.x}%`,
                   width: 20,
                   height: 20,
                   backgroundColor:

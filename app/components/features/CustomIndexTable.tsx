@@ -7,12 +7,14 @@ import {
 } from "@shopify/polaris";
 import { promotedBulkActions, sortOptions } from "app/constants";
 import { useEffect, useMemo, useState } from "react";
-import { ModalCustom } from "./Modal";
+import { ModalCustom } from "../ui/Modal";
 import { useUpdateParams } from "app/hook/useUpdateParams";
 import { useDebounce } from "app/hook/useDebounce";
 import { SelectionType } from "@shopify/polaris/build/ts/src/utilities/use-index-resource-state";
 import CustomRowIndexTabel from "./CustomRowIndexTable";
 import { FilterList } from "./FilterList";
+import { useGalleryStore } from "app/store";
+import { useNavigation } from "@remix-run/react";
 
 type SelectedTypeCustom = {
   selectedResources: string[];
@@ -25,8 +27,16 @@ type SelectedTypeCustom = {
   ) => void;
   clearSelection: () => void;
 };
+
+type galleryType = {
+  data: GalleryType[];
+  total: number;
+  currentPage: number;
+  totalPages: number;
+};
+
 type argOfCustomIndexTable = {
-  galleries: GalleryType[];
+  galleries: galleryType;
   handleDelete: () => void;
   selected: SelectedTypeCustom;
 };
@@ -38,36 +48,32 @@ export default function CustomIndexTable({
 }: argOfCustomIndexTable) {
   const [filters, setFilters] = useState<FilterType>({
     title: "",
-    toDate: "",
-    fromDate: "",
-    sortSelected: ["date asc"],
+    dateOfPicker: "",
+    sortSelected: ["date desc"],
   });
+  const navigation = useNavigation();
+  const { loading, editLoading } = useGalleryStore();
   const { mode, setMode } = useSetIndexFiltersMode(IndexFiltersMode.Filtering);
-
   // custom hooks
   const updateParam = useUpdateParams();
   const debouncedTitle = useDebounce(filters.title);
-
   const appliedFilters = useMemo(() => {
     const filtersArray: IndexFiltersProps["appliedFilters"] = [];
-    if (filters.fromDate || filters.toDate) {
+    if (filters.dateOfPicker) {
       filtersArray.push({
         key: "dueDate",
-        label: `Due Date: ${filters.fromDate || "..."} → ${filters.toDate || "..."}`,
-        onRemove: () =>
-          setFilters((prev) => ({ ...prev, fromDate: "", toDate: "" })),
+        label: `Due Date: ${filters.dateOfPicker}`,
+        onRemove: () => setFilters((prev) => ({ ...prev, dateOfPicker: "" })),
       });
     }
     return filtersArray;
-  }, [filters.fromDate, filters.toDate]);
-
+  }, [filters.dateOfPicker]);
   useEffect(() => {
     updateParam("title", debouncedTitle.trim());
-    updateParam("fromDate", filters.fromDate.trim());
-    updateParam("toDate", filters.toDate.trim());
+    updateParam("dateOfPicker", filters.dateOfPicker.trim());
     updateParam("sort", filters.sortSelected[0]);
-  }, [debouncedTitle, filters.fromDate, filters.toDate, filters.sortSelected]);
-
+    editLoading({ loadingFilter: true });
+  }, [debouncedTitle, filters.dateOfPicker, filters.sortSelected]);
   // handle functions
   const handleFilterChange = <Key extends keyof FilterType>(
     key: keyof FilterType,
@@ -78,25 +84,35 @@ export default function CustomIndexTable({
   const handleFiltersClearAll = () => {
     setFilters({
       title: "",
-      toDate: "",
-      fromDate: "",
+      dateOfPicker: "",
       sortSelected: ["date asc"],
     });
   };
-
+  const handleNextPage = () => {
+    const nextPage = galleries.currentPage + 1;
+    updateParam("page", nextPage.toString());
+    selected.clearSelection();
+  };
+  const handlePreviousPage = () => {
+    const previousPage = galleries.currentPage - 1;
+    updateParam("page", previousPage.toString());
+    selected.clearSelection();
+  };
   // component funcitons
-  const rowMarkup = galleries.map(
-    ({ _id, title, createdAt, hotspots }: GalleryType, index: number) => {
+  const rowMarkup = galleries.data.map(
+    (
+      { _id, title, createdAt, hotspots, imageUrl }: GalleryType,
+      index: number,
+    ) => {
       return (
         <CustomRowIndexTabel
-          data={{ _id, title, createdAt, hotspots }}
+          data={{ _id, title, createdAt, hotspots, imageUrl }}
           index={index}
           selectedBool={selected.selectedResources.includes(_id)}
         />
       );
     },
   );
-
   return (
     <>
       <IndexFilters
@@ -112,15 +128,12 @@ export default function CustomIndexTable({
         tabs={[]}
         selected={0}
         onSelect={() => {}}
-        filters={FilterList(
-          filters.fromDate,
-          filters.toDate,
-          handleFilterChange,
-        )}
+        filters={FilterList(filters.dateOfPicker, handleFilterChange)}
         appliedFilters={appliedFilters}
         onClearAll={handleFiltersClearAll}
         mode={mode}
         setMode={setMode}
+        loading={navigation.state === "loading" && loading.loadingFilter}
       />
       <IndexTable
         resourceName={{
@@ -128,7 +141,7 @@ export default function CustomIndexTable({
           plural: "galleries",
         }}
         promotedBulkActions={promotedBulkActions}
-        itemCount={galleries.length}
+        itemCount={galleries.data.length}
         selectedItemsCount={
           selected.allResourcesSelected
             ? "All"
@@ -141,6 +154,15 @@ export default function CustomIndexTable({
           { title: "Date" },
           { title: "Hotspot" },
         ]}
+        pagination={{
+          label:
+            galleries.totalPages > 1 &&
+            `page ${galleries.currentPage} / ${galleries.totalPages}`,
+          hasNext: galleries.currentPage < galleries.totalPages,
+          hasPrevious: galleries.currentPage > 1 && galleries.totalPages > 1,
+          onNext: handleNextPage,
+          onPrevious: handlePreviousPage,
+        }}
       >
         {rowMarkup}
       </IndexTable>

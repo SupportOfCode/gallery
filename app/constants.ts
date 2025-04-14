@@ -19,7 +19,7 @@ export const promotedBulkActions = [
 
 export const validImageTypes = ["image/gif", "image/jpeg", "image/png"];
 
-export const axisInit = {
-  x: 471,
-  y: 321,
+export const loadingInit = {
+  loadingNewGallery: false,
+  loadingFilter: false,
 };
