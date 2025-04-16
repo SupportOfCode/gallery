@@ -29,6 +29,11 @@ type ParamsEditGallery = {
   hotspots?: IHotspot[];
 };
 
+type ParamsAddHotspot = {
+  galleryId: string;
+  hotspot: Omit<IHotspot, "_id">;
+};
+
 export const getGalleries = async (params: ParamsGetGalleries) => {
   try {
     const filter = {} as FilterQuery<GalleryType>;
@@ -232,6 +237,102 @@ export const deleteGalleries = async (ids: string[]) => {
     if (error instanceof Error) {
       throw new Error(
         "Some thing went wrong when you delete galleries  /n" + error.message,
+      );
+    }
+  }
+};
+
+export const getAllHotspots = async (galleryId: string) => {
+  try {
+    const gallery = await Gallery.findById(galleryId).select("hotspots").lean();
+
+    if (!gallery) {
+      throw new Error("Gallery not found");
+    }
+
+    return gallery.hotspots;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        "Something went wrong while getting hotspots: " + error.message,
+      );
+    }
+  }
+};
+
+export const addHotspotToGallery = async ({
+  galleryId,
+  hotspot,
+}: ParamsAddHotspot) => {
+  try {
+    const updatedGallery = await Gallery.findByIdAndUpdate(
+      galleryId,
+      { $push: { hotspots: hotspot } },
+      { new: true, runValidators: true },
+    ).lean();
+
+    if (!updatedGallery) {
+      throw new Error("Gallery not found");
+    }
+
+    return updatedGallery;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        "Something went wrong when adding hotspot to gallery:\n" +
+          error.message,
+      );
+    }
+  }
+};
+
+export const updateHotspot = async (
+  galleryId: string,
+  hotspotId: string,
+  hotspotData: Partial<IHotspot>,
+) => {
+  try {
+    const result = await Gallery.findOneAndUpdate(
+      { _id: galleryId, "hotspots._id": hotspotId },
+      {
+        $set: {
+          "hotspots.$.x": hotspotData.x,
+          "hotspots.$.y": hotspotData.y,
+          "hotspots.$.title": hotspotData.title,
+          "hotspots.$.img": hotspotData.img,
+          "hotspots.$.productId": hotspotData.productId,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    return result;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        "Something went wrong while updating the hotspot: " + error.message,
+      );
+    }
+  }
+};
+
+export const deleteHotspot = async (galleryId: string, hotspotId: string) => {
+  try {
+    const result = await Gallery.findByIdAndUpdate(
+      galleryId,
+      {
+        $pull: {
+          hotspots: { _id: hotspotId },
+        },
+      },
+      { new: true },
+    );
+
+    return result;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(
+        "Something went wrong while deleting the hotspot: " + error.message,
       );
     }
   }

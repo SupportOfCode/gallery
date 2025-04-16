@@ -1,0 +1,53 @@
+.container-gallery {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+.image-gallery {
+  width: 50vw;
+  max-height: 80vh;
+  object-fit: cover;
+}
+
+.dot-hotspot {
+  position: absolute;
+  top: var(--pointY);
+  left: var(--pointX);
+  width: 20px;
+  height: 20px;
+  background-color: var(--pointColor);
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  cursor: var(--pointCursor);
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease;
+  border: 2px solid white;
+}
+
+.popup-gallery {
+  text-align: center;
+  position: fixed;
+  top: var(--popupPosTop);
+  left: var(--popupPosLeft);
+  transform: translate(-50%, -110%);
+  background-color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border: 1px solid #b2b3b5;
+  white-space: nowrap;
+  z-index: 999;
+  transition: opacity 0.3s ease;
+  opacity: 1;
+}
+
+.image-hotspot {
+  width: 200px;
+  height: 100px;
+  object-fit: cover;
+}

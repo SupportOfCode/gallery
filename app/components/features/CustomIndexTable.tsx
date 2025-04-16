@@ -1,7 +1,7 @@
+import type { IndexFiltersProps } from "@shopify/polaris";
 import {
   IndexFilters,
   IndexFiltersMode,
-  IndexFiltersProps,
   IndexTable,
   useSetIndexFiltersMode,
 } from "@shopify/polaris";
@@ -10,11 +10,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ModalCustom } from "../ui/Modal";
 import { useUpdateParams } from "app/hook/useUpdateParams";
 import { useDebounce } from "app/hook/useDebounce";
-import { SelectionType } from "@shopify/polaris/build/ts/src/utilities/use-index-resource-state";
+import type { SelectionType } from "@shopify/polaris/build/ts/src/utilities/use-index-resource-state";
 import CustomRowIndexTabel from "./CustomRowIndexTable";
 import { FilterList } from "./FilterList";
 import { useGalleryStore } from "app/store";
 import { useNavigation } from "@remix-run/react";
+import type { FilterType, GalleryType } from "app/types";
 
 type SelectedTypeCustom = {
   selectedResources: string[];
@@ -106,9 +107,10 @@ export default function CustomIndexTable({
     ) => {
       return (
         <CustomRowIndexTabel
+          key={_id}
           data={{ _id, title, createdAt, hotspots, imageUrl }}
           index={index}
-          selectedBool={selected.selectedResources.includes(_id)}
+          selectedBool={selected.selectedResources.includes(_id ?? "")}
         />
       );
     },
