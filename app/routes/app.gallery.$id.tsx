@@ -1,7 +1,6 @@
 import {
   ActionFunction,
   LoaderFunction,
-  redirect,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
 } from "@remix-run/node";
@@ -24,9 +23,10 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
+import { ModalCustom } from "app/components/ui/Modal";
+import { PopupPortal } from "app/components/ui/PopupPortal";
 import { validImageTypes } from "app/constants";
 import { IHotspot } from "app/model/Gallery.model.server";
-import { useGalleryStore } from "app/store";
 import {
   addGallery,
   deleteGalleryById,
@@ -64,7 +64,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
 export const action: ActionFunction = async ({ request, params }) => {
   try {
-    if (request.method === "POST") {
+    if (request.method === "POST" || request.method === "PUT") {
       // handle save image
       const uploadHandler = unstable_createMemoryUploadHandler({
         maxPartSize: 10_000_000,
@@ -86,12 +86,35 @@ export const action: ActionFunction = async ({ request, params }) => {
       });
       const data = JSON.parse(formData.get("data") as string);
 
-      await addGallery({
-        title: data.title,
-        hotspots: data.hotspots,
-        imageUrl: result.url,
-        idImage: result.fileId,
-      });
+      if (request.method === "POST") {
+        await addGallery({
+          title: data.title,
+          hotspots: data.hotspots,
+          imageUrl: result.url,
+          idImage: result.fileId,
+        });
+        return "created success";
+      }
+
+      if (request.method === "PUT") {
+        // delete image old
+        const auth = Buffer.from(`${IkPrivateKey}:`).toString("base64");
+        await fetch(`https://api.imagekit.io/v1/files/${data.idImg}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            Accept: "application/json",
+          },
+        });
+        await editGalleryById({
+          id: params.id as string,
+          title: data.title,
+          imageUrl: result.url,
+          idImage: result.fileId,
+          hotspots: data.hotspots,
+        });
+        return "updated success";
+      }
     }
 
     if (request.method === "DELETE") {
@@ -106,11 +129,9 @@ export const action: ActionFunction = async ({ request, params }) => {
           Accept: "application/json",
         },
       });
-
       await deleteGalleryById(params.id as string);
+      return "deleted success";
     }
-
-    return redirect("/app");
   } catch (err) {
     console.error("ImageKit Upload Error", err);
     return Response.json({ error: "Failed to upload image" }, { status: 500 });
@@ -122,7 +143,7 @@ export default function Gallery() {
   const fetcher = useFetcher();
   const navigate = useNavigate();
   const navigation = useNavigation();
-  const { loading, editLoading } = useGalleryStore();
+
   const [hotspots, setHotspots] = useState<Point[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [originalHotspot, setOriginalHotspot] = useState<Point | null>(null);
@@ -131,11 +152,28 @@ export default function Gallery() {
   const [error, setError] = useState({
     title: "",
   });
+  const [uncheck, setUnCheck] = useState(true);
   const [acceptNavigate, setAcceptNavigate] = useState(true);
   const [file, setFile] = useState<File | null>();
+  const [popupPos, setPopupPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const draggingIndex = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (navigation.state === "loading") {
+      shopify.loading(true);
+    } else {
+      shopify.loading(false);
+    }
+    if (fetcher.data === "updated success") navigate("/app");
+    if (fetcher.data === "deleted success") navigate("/app");
+    if (fetcher.data === "created success") navigate("/app");
+    if (fetcher.state === "loading") shopify.toast.show(fetcher.data as string);
+  }, [fetcher.data, navigation.state]);
 
   const handleAddHotspot = (newHotspot: Point) => {
     setHotspots([newHotspot, ...hotspots]);
@@ -216,7 +254,6 @@ export default function Gallery() {
 
   const handleDelete = (index: number) => {
     const updated = hotspots.filter((_, i) => i !== index);
-    editLoading({ loadingDeleteGallery: true });
     setHotspots(updated);
     setEditingIndex(null);
     setOriginalHotspot(null);
@@ -258,8 +295,24 @@ export default function Gallery() {
     draggingIndex.current = null;
   };
 
+  // const toggleViewPopup = (index: number) => {
+  //   // setViewIndex(viewIndex === index ? null : index);
+  // };
+
   const toggleViewPopup = (index: number) => {
-    setViewIndex(viewIndex === index ? null : index);
+    if (viewIndex === index) {
+      setViewIndex(null);
+      setPopupPos(null);
+    } else {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const point = hotspots[index];
+      if (rect) {
+        const top = rect.top + (rect.height * point.y) / 100;
+        const left = rect.left + (rect.width * point.x) / 100;
+        setPopupPos({ top, left });
+      }
+      setViewIndex(viewIndex === index ? null : index);
+    }
   };
 
   const handleUpload = () => {
@@ -269,7 +322,6 @@ export default function Gallery() {
       return;
     }
     const formData = new FormData();
-    editLoading({ loadingSave: true });
     formData.append("file", file);
     const data = {
       title: tilte,
@@ -280,6 +332,7 @@ export default function Gallery() {
         img: h.img,
         productId: h.id,
       })),
+      idImg: gallery.data.idImage,
     };
     formData.append("data", JSON.stringify(data));
     fetcher.submit(formData, {
@@ -294,7 +347,7 @@ export default function Gallery() {
     formData.append("idImg", gallery.data.idImage as string);
     fetcher.submit(formData, { method: "delete" });
     shopify.loading(true);
-    editLoading({ loadingDeleteGallery: true });
+    shopify.modal.hide("modal-custom");
   };
 
   const argOfPage = {
@@ -305,14 +358,6 @@ export default function Gallery() {
       },
     },
   };
-
-  useEffect(() => {
-    if (navigation.state === "loading") {
-      shopify.loading(true);
-    } else {
-      shopify.loading(false);
-    }
-  }, [navigation.state]);
 
   useEffect(() => {
     if (gallery.page === "edit") {
@@ -351,7 +396,13 @@ export default function Gallery() {
               Add hotspot
             </Button>
             <span style={{ marginLeft: "7px" }} />
-            <Button variant="secondary" onClick={() => setFile(null)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setFile(null);
+                setUnCheck(false);
+              }}
+            >
               UnCheck Image
             </Button>
 
@@ -477,7 +528,7 @@ export default function Gallery() {
           >
             <img
               src={
-                gallery.page === "edit"
+                gallery.page === "edit" && uncheck
                   ? gallery.data.imageUrl
                   : validImageTypes.includes(
                         (file && (file.type as string)) ?? "",
@@ -516,49 +567,59 @@ export default function Gallery() {
                 }}
               >
                 {viewIndex === index && point.saved && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    style={{
-                      textAlign: "center",
-                      position: "absolute",
-                      bottom: "calc(100% + 10px)",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      backgroundColor: "#ffffff",
-                      padding: "8px 14px",
-                      borderRadius: 8,
-                      fontSize: 14,
-                      fontWeight: 500,
-                      color: "#1f2937",
-                      boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-                      border: "1px solid #b2b3b5",
-                      whiteSpace: "nowrap",
-                      zIndex: 999,
-                      transition: "opacity 0.3s ease",
-                      opacity: 1,
-                    }}
-                  >
-                    <div>
-                      <img
-                        style={{
-                          width: "200px",
-                          height: "100px",
-                          objectFit: "cover",
-                        }}
-                        src={`${point.img ?? "https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/04/anh-con-gai-1-1.jpg"}`}
-                        alt=""
-                      />
-                    </div>
-                    <p>{point.label}</p>
-                    <a
-                      target="_blank"
-                      href={`https://admin.shopify.com/store/the-most-expensive-store-on-the-world/products/${point.id.split("/").pop() ?? ""}`}
+                  <PopupPortal>
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      style={{
+                        textAlign: "center",
+                        position: "fixed",
+                        // bottom: "calc(100% + 10px)",
+                        // left: "50%",
+                        // transform: "translateX(-50%)",
+                        //// demo
+                        // top: `calc(${point.y}% - 55%)`,
+                        // left: `calc(${point.x}% - 7%)`,
+                        // transform: "translate(-50%, -110%)",
+                        //// demo 2
+                        top: popupPos?.top,
+                        left: popupPos?.left,
+                        transform: "translate(-50%, -110%)",
+                        backgroundColor: "#ffffff",
+                        padding: "8px 14px",
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 500,
+                        color: "#1f2937",
+                        boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
+                        border: "1px solid #b2b3b5",
+                        whiteSpace: "nowrap",
+                        zIndex: 999,
+                        transition: "opacity 0.3s ease",
+                        opacity: 1,
+                      }}
                     >
-                      see more
-                    </a>
-                  </div>
+                      <div>
+                        <img
+                          style={{
+                            width: "200px",
+                            height: "100px",
+                            objectFit: "cover",
+                          }}
+                          src={`${point.img ?? "https://hoanghamobile.com/tin-tuc/wp-content/uploads/2024/04/anh-con-gai-1-1.jpg"}`}
+                          alt=""
+                        />
+                      </div>
+                      <p>{point.label}</p>
+                      <a
+                        target="_blank"
+                        href={`https://admin.shopify.com/store/the-most-expensive-store-on-the-world/products/${point.id.split("/").pop() ?? ""}`}
+                      >
+                        see more
+                      </a>
+                    </div>
+                  </PopupPortal>
                 )}
               </div>
             ))}
@@ -633,8 +694,9 @@ export default function Gallery() {
         gallery.page === "edit" ? (
           <Button
             tone="critical"
-            onClick={handleDeleteGallery}
-            loading={loading.loadingDeleteGallery}
+            onClick={() => {
+              shopify.modal.show("modal-custom");
+            }}
           >
             Delete Gallery
           </Button>
@@ -643,7 +705,18 @@ export default function Gallery() {
         )
       }
     >
-      {file || gallery.page === "edit" ? GalleryPage : CreateGalleryPage}
+      {file || (gallery.page === "edit" && uncheck)
+        ? GalleryPage
+        : CreateGalleryPage}
+      <ModalCustom
+        text={{
+          titleModal: "Delete Products",
+          titleMain: `Are you want to delete this product`,
+          titleAction: "Delete",
+        }}
+        handleCancle={() => shopify.modal.hide("modal-custom")}
+        handleMain={handleDeleteGallery}
+      />
       <SaveBar
         id="save-bar-custom"
         onShow={() => setAcceptNavigate(false)}
@@ -659,7 +732,6 @@ export default function Gallery() {
         <button
           onClick={() => {
             shopify.saveBar.hide("save-bar-custom");
-            // setProduct(productOld.data);
           }}
         />
       </SaveBar>

@@ -14,7 +14,7 @@ export default function CustomRowIndexTabel({
   selectedBool,
 }: argOfCustomIndexTable) {
   const navigate = useNavigate();
-  const date = formatDate(data.createdAt);
+  const date = formatDate(data.createdAt, false);
 
   return (
     <IndexTable.Row

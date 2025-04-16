@@ -1,6 +1,6 @@
-export function formatDate(value: Date): string {
+export function formatDate(value: Date, plus: boolean = true): string {
   const date = new Date(value);
-  date.setDate(date.getDate() + 1);
+  if (plus) date.setDate(date.getDate() + 1);
   date.setMonth(date.getMonth());
   const day = date.getUTCDate().toString().padStart(2, "0");
   const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
@@ -27,6 +27,8 @@ export function parseDate(value: string): Date | null {
   ) {
     return null;
   }
+  const date = new Date(year, month, day);
+  date.setHours(23, 59, 0, 0);
 
-  return new Date(Date.UTC(year, month, day));
+  return date;
 }

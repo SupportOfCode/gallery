@@ -23,6 +23,7 @@ type ParamsEditGallery = {
   id: string;
   title?: string;
   imageUrl?: string;
+  idImage?: string;
   hotspots?: IHotspot[];
 };
 
@@ -174,13 +175,14 @@ export const addGallery = async ({
 
 export const editGalleryById = async (params: ParamsEditGallery) => {
   try {
-    const { id, title, imageUrl, hotspots } = params;
+    const { id, title, imageUrl, idImage, hotspots } = params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid gallery ID format");
     }
     const updateData: Partial<ParamsEditGallery> = {};
     if (title !== undefined) updateData.title = title;
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
+    if (idImage !== undefined) updateData.idImage = idImage;
     if (hotspots !== undefined) updateData.hotspots = hotspots;
 
     const updatedGallery = await Gallery.findByIdAndUpdate(
