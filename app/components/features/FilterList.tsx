@@ -1,5 +1,6 @@
 import { formatDate, parseDate } from "app/common";
 import { DateRangePicker } from "../ui/DatePinker";
+import type { FilterType } from "app/types";
 
 export function FilterList(
   dateOfPicker: string,

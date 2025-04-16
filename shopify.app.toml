@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "68ffcc25546fba92c1291c26f15f57ce"
-application_url = "https://bugs-but-classical-exposure.trycloudflare.com"
+application_url = "https://kings-outcome-owns-effective.trycloudflare.com"
 embedded = true
 name = "fifth-app"
 handle = "fifth-app-6"
@@ -27,9 +27,9 @@ scopes = "write_products, read_online_store_pages, read_product_listings"
 
 [auth]
 redirect_urls = [
-  "https://bugs-but-classical-exposure.trycloudflare.com/auth/callback",
-  "https://bugs-but-classical-exposure.trycloudflare.com/auth/shopify/callback",
-  "https://bugs-but-classical-exposure.trycloudflare.com/api/auth/callback"
+  "https://kings-outcome-owns-effective.trycloudflare.com/auth/callback",
+  "https://kings-outcome-owns-effective.trycloudflare.com/auth/shopify/callback",
+  "https://kings-outcome-owns-effective.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]

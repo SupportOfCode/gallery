@@ -1,6 +1,8 @@
 import { useNavigate } from "@remix-run/react";
 import { IndexTable, Thumbnail } from "@shopify/polaris";
 import { formatDate } from "app/common";
+import { imgThumbnailDefault } from "app/constants";
+import type { GalleryType } from "app/types";
 
 type argOfCustomIndexTable = {
   data: GalleryType;
@@ -14,11 +16,11 @@ export default function CustomRowIndexTabel({
   selectedBool,
 }: argOfCustomIndexTable) {
   const navigate = useNavigate();
-  const date = formatDate(data.createdAt, false);
+  const date = formatDate(data.createdAt ?? new Date(), false);
 
   return (
     <IndexTable.Row
-      id={data._id}
+      id={data._id ?? ""}
       key={data._id}
       selected={selectedBool}
       position={index}
@@ -28,10 +30,7 @@ export default function CustomRowIndexTabel({
     >
       <IndexTable.Cell>
         <Thumbnail
-          source={
-            data.imageUrl ??
-            "https://burst.shopifycdn.com/photos/black-leather-choker-necklace_373x@2x.jpg"
-          }
+          source={data.imageUrl ?? imgThumbnailDefault}
           size="medium"
           alt="Black choker necklace"
         />

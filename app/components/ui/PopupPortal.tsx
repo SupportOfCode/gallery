@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
-import { ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
 export function PopupPortal({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);

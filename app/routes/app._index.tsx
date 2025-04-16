@@ -1,4 +1,4 @@
-import { ActionFunction, LoaderFunction } from "@remix-run/node";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
 import { useFetcher, useLoaderData, useNavigation } from "@remix-run/react";
 import { useIndexResourceState, Page, Card, Button } from "@shopify/polaris";
 import { deleteGalleries, getGalleries } from "app/utils/galleries.server";
@@ -57,7 +57,7 @@ export default function IndexFiltersDefaultExample() {
       shopify.loading(false);
     }
     if (fetcher.state === "loading") shopify.toast.show(fetcher.data as string);
-  }, [fetcher.state, navigation.state]);
+  }, [fetcher.state, fetcher.data, navigation.state]);
 
   const handleDelete = () => {
     const formData = new FormData();
