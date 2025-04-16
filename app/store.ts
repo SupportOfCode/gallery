@@ -7,6 +7,7 @@ interface GalleryStore {
   // gallery
   galleryNew: GalleryType;
   setGallery: ({ ...props }: GalleryType) => void;
+  resetFile: () => void;
   resetGallery: () => void;
 
   // loading
@@ -31,6 +32,12 @@ export const useGalleryStore = create<GalleryStore>()(
         state.galleryNew.hotspots = hotspots ?? state.galleryNew.hotspots;
         state.galleryNew.file = file ?? state.galleryNew.file;
         state.galleryNew.error = error ?? state.galleryNew.error;
+      });
+    },
+
+    resetFile: () => {
+      set((state) => {
+        state.galleryNew.file = null;
       });
     },
 

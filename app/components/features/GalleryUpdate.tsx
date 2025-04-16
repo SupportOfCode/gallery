@@ -19,7 +19,6 @@ import styles from "../../css/components/gallery-update.module.css";
 import { useEffect, useRef, useState } from "react";
 import { useGalleryStore } from "app/store";
 import type { GalleryTypeOfServer, Point, ProductResource } from "app/types";
-import { useParams } from "@remix-run/react";
 
 type GalleryPageProps = {
   gallery: {
@@ -29,7 +28,6 @@ type GalleryPageProps = {
 };
 
 export default function GalleryUpdate({ gallery }: GalleryPageProps) {
-  const param = useParams();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [originalHotspot, setOriginalHotspot] = useState<Point | null>(null);
   const [viewIndex, setViewIndex] = useState<number | null>(null);
@@ -37,7 +35,7 @@ export default function GalleryUpdate({ gallery }: GalleryPageProps) {
     top: number;
     left: number;
   } | null>(null);
-  const { galleryNew, setGallery, untilVariable, setUntilVariable } =
+  const { galleryNew, setGallery, untilVariable, setUntilVariable, resetFile } =
     useGalleryStore();
   const draggingIndex = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -177,8 +175,6 @@ export default function GalleryUpdate({ gallery }: GalleryPageProps) {
     }
   };
 
-  console.log(param.id);
-
   useEffect(() => {
     if (gallery.page === "edit") {
       const hotspots = gallery.data.hotspots.map((h) => ({
@@ -223,7 +219,7 @@ export default function GalleryUpdate({ gallery }: GalleryPageProps) {
           <Button
             variant="secondary"
             onClick={() => {
-              setGallery({ file: null });
+              resetFile();
               setUntilVariable({ unCheck: false });
             }}
           >
