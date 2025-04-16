@@ -105,8 +105,14 @@ export default function Gallery() {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const [acceptNavigate, setAcceptNavigate] = useState(true);
-  const { galleryNew, untilVariable, setGallery, resetGallery } =
-    useGalleryStore();
+  const {
+    galleryNew,
+    untilVariable,
+    setGallery,
+    resetGallery,
+    resetLoading,
+    resetUntilVariable,
+  } = useGalleryStore();
 
   const handleUpload = () => {
     if (!galleryNew.file) return;
@@ -163,6 +169,19 @@ export default function Gallery() {
 
   const argOfPage = {
     title: "Gallery Page",
+    secondaryActions:
+      gallery.page === "edit" ? (
+        <Button
+          tone="critical"
+          onClick={() => {
+            shopify.modal.show("modal-custom");
+          }}
+        >
+          Delete Gallery
+        </Button>
+      ) : (
+        []
+      ),
     backAction: {
       onAction: () => {
         if (acceptNavigate) navigate("/app");
@@ -172,7 +191,12 @@ export default function Gallery() {
 
   useEffect(() => {
     resetGallery();
+    resetLoading();
+    resetUntilVariable();
   }, []);
+
+  console.log("uncheck", untilVariable.unCheck);
+  console.log("galleryNew.file", galleryNew.file);
 
   useEffect(() => {
     if (navigation.state === "loading" || fetcher.state !== "idle") {
@@ -195,26 +219,21 @@ export default function Gallery() {
     }
   }, [fetcher.data, navigation.state, fetcher.state]);
 
+  console.log("test", untilVariable.unCheck);
+  console.log("test", gallery.page === "edit" && untilVariable.unCheck);
+
+  console.log(
+    "demo",
+    galleryNew.file || (gallery.page === "edit" && untilVariable.unCheck),
+  );
+
   return (
     <Page
       title="Gallery Page"
       backAction={argOfPage.backAction}
-      secondaryActions={
-        gallery.page === "edit" ? (
-          <Button
-            tone="critical"
-            onClick={() => {
-              shopify.modal.show("modal-custom");
-            }}
-          >
-            Delete Gallery
-          </Button>
-        ) : (
-          []
-        )
-      }
+      secondaryActions={argOfPage.secondaryActions}
     >
-      {galleryNew.file || (gallery.page === "edit" && untilVariable) ? (
+      {galleryNew.file || (gallery.page === "edit" && untilVariable.unCheck) ? (
         <GalleryUpdate gallery={gallery} />
       ) : (
         <GalleryAdd />
